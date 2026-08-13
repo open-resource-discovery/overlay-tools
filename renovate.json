@@ -1,0 +1,10 @@
+{
+	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
+	"extends": ["group:definitelyTyped"],
+	"timezone": "Europe/Berlin",
+	"prConcurrentLimit": 20,
+	"automerge": true,
+	"platformAutomerge": true,
+	"lockFileMaintenance": { "enabled": true },
+	"schedule": ["every weekend"]
+}
