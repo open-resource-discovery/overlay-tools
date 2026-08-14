@@ -1,0 +1,28 @@
+{
+	"compilerOptions": {
+		"lib": ["ES2021"],
+		"module": "node16",
+		"moduleResolution": "node16",
+		"target": "ES2021",
+		"outDir": "dist",
+		"rootDir": ".",
+		"inlineSourceMap": true,
+		"resolveJsonModule": true,
+		"esModuleInterop": true,
+		"declaration": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"allowUnreachableCode": false,
+		"allowUnusedLabels": false,
+		"exactOptionalPropertyTypes": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitOverride": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"forceConsistentCasingInFileNames": true,
+		"types": ["node"]
+	},
+	"include": ["src/**/*.ts", "tests/**/*.ts"],
+	"exclude": ["node_modules", "dist"]
+}
