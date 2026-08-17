@@ -4,8 +4,6 @@
 
 Tools for merging, validating, and converting [ORD Overlay](https://open-resource-discovery.github.io/specification/spec-v1/interfaces/overlay) documents.
 
-> **Alpha Status:** This tooling has been developed with AI assistance and is intended to validate the ORD Overlay specification under realistic conditions. Use with appropriate caution in production environments.
-
 ## Installation
 
 ```bash
