@@ -70,7 +70,7 @@
 		"yaml": "^2.9.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.5.5",
+		"@biomejs/biome": "2.5.12",
 		"@types/node": "25.9.5",
 		"typescript": "7.0.2"
 	},
