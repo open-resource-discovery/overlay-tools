@@ -15,17 +15,17 @@ export type OverlayPerspective = (
 	string;
 /**
  * Correlation ID identifying related records in external systems of record.
- * MUST be a valid [Correlation ID](../../spec-v1/index.md#correlation-id).
+ * MUST be a valid [Correlation ID](../../spec-v1/concepts/identifiers.md#correlation-id).
  */
 export type OverlayCorrelationID = string;
 /**
  * Correlation ID identifying related records in external systems of record.
- * MUST be a valid [Correlation ID](../../spec-v1/index.md#correlation-id).
+ * MUST be a valid [Correlation ID](../../spec-v1/concepts/identifiers.md#correlation-id).
  */
 export type OverlayCorrelationID1 = string;
 /**
  * Correlation ID identifying related records in external systems of record.
- * MUST be a valid [Correlation ID](../../spec-v1/index.md#correlation-id).
+ * MUST be a valid [Correlation ID](../../spec-v1/concepts/identifiers.md#correlation-id).
  */
 export type OverlayCorrelationID2 = string;
 /**
@@ -45,14 +45,14 @@ export type OverlayVisibility = ("public" | "internal" | "private") & string;
  * This can be used to disambiguate how selectors are interpreted for the target.
  *
  * MUST be either:
- * - any valid [Specification ID](../../spec-v1/index.md#specification-id), or
+ * - any valid [Specification ID](../../spec-v1/concepts/identifiers.md#specification-id), or
  * - one of the pre-defined values reused from:
  *   - API Resource Definition `type`
  *   - Event Resource Definition `type`
  *   - Capability Definition `type`
  *
  * The literal value `custom` is deprecated for `definitionType` and MUST NOT be used.
- * In such cases, use a concrete [Specification ID](../../spec-v1/index.md#specification-id) instead.
+ * In such cases, use a concrete [Specification ID](../../spec-v1/concepts/identifiers.md#specification-id) instead.
  */
 export type OverlayDefinitionType = (
 	| string
@@ -71,7 +71,8 @@ export type OverlayDefinitionType = (
 	| "sap-csn-interop-effective-v1"
 	| "asyncapi-v2"
 	| "sap.mdo:mdi-capability-definition:v1"
-	| "ord:overlay:v1"
+	| "oas-overlay-v1"
+	| "arazzo-v1"
 ) &
 	string;
 /**
@@ -84,6 +85,24 @@ export type OverlayPatchAction = "update" | "remove" | "merge";
  *
  * Prefer concept-level selectors over generic `jsonPath` where possible,
  * as they are resilient to structural changes in the target format.
+ *
+ * Selector behavior:
+ * - All selectors match only structure the target already declares.
+ *   Overlays patch what exists; they do not synthesize the selected element.
+ *   This includes `jsonPath`, which MUST NOT create a missing target.
+ * - A `merge` or `update` patch whose concept-level selector matches nothing MUST error.
+ *   An unmatched `remove` patch succeeds without changing the document, which makes removal idempotent,
+ *   and tooling SHOULD report a warning.
+ *   (`root` always resolves, so this cannot arise for `root`.)
+ * - A `jsonPath` selector MAY match zero or more elements.
+ *   When it matches nothing, the patch succeeds without changing the document and tooling SHOULD report
+ *   a warning, regardless of the patch action.
+ *   When it matches one or more elements, all locations are identified before mutation and the patch
+ *   is applied exactly once to every matched location.
+ * - This is a deliberate limitation of this version: there is no create-on-missing behavior.
+ *   Errors and warnings surface selector typos and wrong assumptions about the target structure
+ *   instead of silently authoring unintended content. A future version MAY add a dedicated create
+ *   action if a concrete use case requires it.
  */
 export type OverlaySelector =
 	| OverlaySelectorByRoot
@@ -104,8 +123,46 @@ export type OverlaySelector =
  * For OData targets (`edmx`, `csdl-json`), the value MUST be expressed in CSDL JSON
  * annotation format. Annotation keys use the `@TermName` convention:
  * e.g. `{ "@Core.Description": "...", "@Core.Revisions": [...] }`.
- * When the target is EDMX XML, the merge implementation converts this to `<Annotation>` elements.
+ * For OData v4 EDMX XML, the merge implementation converts this to `<Annotation>` elements
+ * and writes them as external targeting (`<Annotations Target="Qualified.Name/path">` blocks at
+ * the schema level), reconciling with any annotations already present for the same target so that
+ * a given target's annotations are never split across inline and external locations.
+ * Applying overlays to OData v2 EDMX XML is out of scope, and tooling MUST report an error.
+ * As a workaround, an OData v4 EDMX document MAY describe the model of an OData v2 API and serve
+ * as the overlay target.
+ * Target identifiers use OData CSDL target syntax: `Namespace.Type` for types,
+ * the namespace name itself for namespace selectors,
+ * `Namespace.Type/Member` for properties and enum members,
+ * `Namespace.Container/Member` for entity sets and FunctionImports,
+ * and `Namespace.Operation(Type,...)` for Actions and Functions.
+ * Operation targets always include every declared parameter type, including the binding parameter.
+ * Parameter and return-type targets append `/<parameter-name>` and `/$ReturnType`, respectively.
  * See: https://docs.oasis-open.org/odata/odata-csdl-json/v4.01/odata-csdl-json-v4.01.html
+ *
+ * EDMX targets are annotation-only: overlays add, replace, or remove annotations on structure that
+ * already exists in the source schema. They cannot create new structural elements (EntityType,
+ * EntitySet, Property, Function/Action, EnumType, ComplexType), and `jsonPath` is not available for
+ * EDMX. New structure belongs in the source CSDL/CDS, not in an overlay.
+ * For EDMX, `merge` replaces annotations with the same term-plus-qualifier identity and preserves
+ * all others; `update` replaces the selected target's complete annotation set; and `remove` with
+ * omitted `data` removes that complete annotation set while preserving the structural target.
+ *
+ * For CSDL JSON, enum-member annotations are carried as sibling keys on the enum type
+ * (`"Read@Core.Description"`), because an enum member is a scalar value that cannot itself hold
+ * annotation properties.
+ * `merge` adds or replaces the supplied sibling annotations while preserving the member value and
+ * other annotations. `update` preserves the member value and replaces that member's complete
+ * annotation set. `remove` with `data` removes the specified sibling annotations, while `remove`
+ * with omitted `data` removes the member and all of its sibling annotations.
+ *
+ * For CSDL JSON, `merge`, `update`, and data-bearing `remove` patches that use an OData
+ * concept-level selector (`operation`, `entityType`, `complexType`, `enumType`, `propertyType`,
+ * `entitySet`, `namespace`, `parameter`, or `returnType`) operate on annotations rather than
+ * structural CSDL content.
+ * Their data MAY use member names to nest annotation payloads for those members, but MUST NOT use
+ * `$`-prefixed control properties or other non-annotation values to replace structural content.
+ * Tooling MUST report such structural data as an error rather than silently ignoring it.
+ * `root` and `jsonPath` selectors retain the generic structural action semantics.
  *
  * For CSN Interop targets (`sap-csn-interop-effective-v1`), the value is plain CSN JSON
  * merged directly into the matched entity definition or element object.
@@ -115,7 +172,7 @@ export type OverlaySelector =
  */
 export type OverlayPatchValue =
 	| {
-			[k: string]: unknown | undefined;
+			[k: string]: unknown;
 	  }
 	| unknown[]
 	| string
@@ -153,7 +210,6 @@ export interface ORDOverlay {
 	ordOverlay: "0.1";
 	/**
 	 * Optional ORD ID of this overlay document.
-	 * MUST be provided if the ORD Overlay is published via ORD Configuration endpoint.
 	 */
 	ordId?: string;
 	/**
@@ -191,7 +247,7 @@ export interface ORDOverlay {
  */
 export interface OverlaySystemType {
 	/**
-	 * The [system namespace](../../spec-v1/index.md#system-namespace) is a unique identifier for the system type.
+	 * The [system namespace](../../spec-v1/concepts/identifiers.md#system-namespace) is a unique identifier for the system type.
 	 */
 	systemNamespace?: string;
 	/**
@@ -241,12 +297,28 @@ export interface OverlaySystemInstance {
 	/**
 	 * Optional [base URL](../../spec-v1/index.md#base-url) of the system instance.
 	 * By providing the base URL, relative URLs in the overlay are resolved relative to it.
+	 *
+	 * The `baseUrl` MUST NOT contain a trailing slash.
 	 */
 	baseUrl?: string;
 	/**
 	 * Optional local ID for the system instance (usually tenant ID), as known by the described system.
 	 */
 	localId?: string;
+	/**
+	 * Optional globally unique and stable ID of the system instance (tenant), assigned by the authority responsible
+	 * for that tenant identity.
+	 *
+	 * Unlike `localId`, which is only unique within the described system, `globalId` is intended for correlation
+	 * across participating systems. It is the same identity that can be passed as the `Global-Tenant-Id`
+	 * header in the [`open`](../../spec-extensions/access-strategies/open.md#global-tenant-id) and
+	 * [`basic-auth`](../../spec-extensions/access-strategies/basic-auth.md#global-tenant-id) access strategies.
+	 *
+	 * The provider MUST NOT invent this value. It MAY receive the value from an authoritative tenant or landscape
+	 * service, including through aggregator onboarding, and include it when it can reliably correlate the described
+	 * system instance with that authority's record.
+	 */
+	globalId?: string;
 	/**
 	 * Correlation IDs for linking this system instance to external systems of record.
 	 *
@@ -261,7 +333,7 @@ export interface OverlaySystemInstance {
 export interface OverlayTarget {
 	/**
 	 * ORD ID of the target being patched (e.g. an API Resource, Event Resource, Data Product).
-	 * MUST be a valid [ORD ID](../../spec-v1/index.md#ord-id).
+	 * MUST be a valid [ORD ID](../../spec-v1/concepts/identifiers.md#ord-id).
 	 */
 	ordId?: string;
 	/**
@@ -292,12 +364,28 @@ export interface OverlaySystemInstance1 {
 	/**
 	 * Optional [base URL](../../spec-v1/index.md#base-url) of the system instance.
 	 * By providing the base URL, relative URLs in the overlay are resolved relative to it.
+	 *
+	 * The `baseUrl` MUST NOT contain a trailing slash.
 	 */
 	baseUrl?: string;
 	/**
 	 * Optional local ID for the system instance (usually tenant ID), as known by the described system.
 	 */
 	localId?: string;
+	/**
+	 * Optional globally unique and stable ID of the system instance (tenant), assigned by the authority responsible
+	 * for that tenant identity.
+	 *
+	 * Unlike `localId`, which is only unique within the described system, `globalId` is intended for correlation
+	 * across participating systems. It is the same identity that can be passed as the `Global-Tenant-Id`
+	 * header in the [`open`](../../spec-extensions/access-strategies/open.md#global-tenant-id) and
+	 * [`basic-auth`](../../spec-extensions/access-strategies/basic-auth.md#global-tenant-id) access strategies.
+	 *
+	 * The provider MUST NOT invent this value. It MAY receive the value from an authoritative tenant or landscape
+	 * service, including through aggregator onboarding, and include it when it can reliably correlate the described
+	 * system instance with that authority's record.
+	 */
+	globalId?: string;
 	/**
 	 * Correlation IDs for linking this system instance to external systems of record.
 	 *
@@ -363,9 +451,6 @@ export interface OverlaySelectorByRoot {
 	 * **OData CSDL JSON** (`csdl-json`):
 	 * - Patch root-level `$Version`, `$EntityContainer`, or add namespace objects
 	 *
-	 * **ORD Document** (no specific `definitionType`):
-	 * - Patch root-level ORD document properties
-	 *
 	 * **MCP / A2A** (any Specification ID):
 	 * - Patch top-level metadata or add root-level tool/skill definitions
 	 *
@@ -385,6 +470,21 @@ export interface OverlaySelectorByJsonPath {
 	 * - `csdl-json`: targets any node in the OData CSDL JSON document.
 	 * - MCP (any Specification ID): targets any node in the MCP-compatible JSON/YAML tool metadata.
 	 *
+	 * JSONPath syntax and evaluation follow [RFC 9535](https://www.rfc-editor.org/rfc/rfc9535).
+	 * Every conforming toolkit MUST support this portable subset:
+	 * - the root identifier `$`;
+	 * - child-name selectors in dot notation or single-quoted or double-quoted bracket notation;
+	 * - array selectors using non-negative indices;
+	 * - object and array wildcards;
+	 * - selector lists containing distinct member names or distinct non-negative array indices; and
+	 * - array slices whose bounds are omitted or non-negative and whose step is omitted or positive.
+	 *
+	 * A portable ORD Overlay MUST NOT use JSONPath features outside this subset.
+	 * Toolkits MAY support additional RFC 9535 features or implementation-specific extensions,
+	 * but overlays using them are implementation-specific and not portable.
+	 * A toolkit that does not support an expression MUST report an error and MUST NOT treat the
+	 * expression as matching zero elements.
+	 *
 	 * Use concept-level selectors (`operation`, `entityType`, etc.) when available, as they are
 	 * resilient to structural differences between format versions. Reserve `jsonPath` for cases
 	 * where no concept-level selector covers the target location.
@@ -400,13 +500,21 @@ export interface OverlaySelectorByOperation {
 	 * - MCP (any Specification ID other than `a2a-agent-card`): maps to `tools[].name`.
 	 *   See: https://modelcontextprotocol.io/specification/2025-11-25/schema#tool-name
 	 * - A2A Agent Card (`a2a-agent-card`): maps to `skills[].id`.
-	 *   See: https://google.github.io/A2A/specification/#agentskill-object
+	 *   See: https://a2a-protocol.org/latest/specification/#445-agentskill
 	 * - OData (`edmx`, `csdl-json`): maps to the Action or Function name at Schema level.
-	 *   MUST use the namespace-qualified name (e.g. `OData.Demo.Approval`) to be unambiguous.
+	 *   MUST use either the namespace-qualified name (e.g. `OData.Demo.Approval`) or its
+	 *   namespace-qualified signature (e.g. `OData.Demo.Approval(Edm.Int32,Edm.String)`).
 	 *   For OData v2 `edmx` targets: also searches FunctionImport elements in EntityContainer
-	 *   when no Schema-level Action/Function matches the name.
-	 *   For bound operations overloaded on multiple entity types, use [`jsonPath`](#overlay-selector-by-jsonpath) as a fallback
-	 *   to target the specific overload.
+	 *   when a selector without a signature matches no Schema-level Action or Function.
+	 *   A signature selector MUST NOT match a FunctionImport.
+	 *
+	 *   A namespace-qualified name without a signature is sufficient only when it identifies
+	 *   exactly one Action, Function or Function Import.
+	 *   Otherwise, the selector MUST use a signature containing every declared parameter type
+	 *   in declaration order, including the binding parameter of a bound operation.
+	 *   Signature matching uses exact parameter count, order, and types.
+	 *   Empty parentheses select a zero-parameter operation, so `OData.Demo.Ping()` is distinct
+	 *   from the name-only selector `OData.Demo.Ping`.
 	 *
 	 * When `definitionType` is set on `target`, the format is known and the selector resolves unambiguously.
 	 * When `definitionType` is absent, the implementation SHOULD infer the format from the target
@@ -511,13 +619,15 @@ export interface OverlaySelectorByEntitySet {
 	 * Concept-level entity set identifier.
 	 * Supported metadata formats:
 	 * - `edmx` (OData v2/v4 CSDL XML): targets an EntitySet element inside EntityContainer.
-	 *   May use the unqualified name (e.g. `Customers`) or namespace-prefixed name.
 	 * - `csdl-json` (OData v4 CSDL JSON): targets a key with `$Collection: true` inside the
 	 *   EntityContainer object in the namespace.
 	 *
 	 * Use `entitySet` when you need to patch EntityContainer-bound metadata such as
 	 * Capabilities annotations (InsertRestrictions, UpdateRestrictions, etc.).
-	 * For patching the EntityType structure (Properties, NavigationProperties), use `entityType`.
+	 * You MAY use an unqualified name if unique (e.g. `Customers`).
+	 * If not unique a fully-qualified name (e.g. `OData.Demo.Customers`) MUST be used.
+	 * For patching EntityType structure (Properties, NavigationProperties) via deep merge, use `entityType`.
+	 * To target a specific property for fine-grained patching, prefer `propertyType` (requires `entityType` as context).
 	 */
 	entitySet: string;
 }
@@ -552,7 +662,10 @@ export interface OverlaySelectorByParameter {
 	parameter: string;
 	/**
 	 * Required operation context for the selected parameter.
-	 * - For OData: the namespace-qualified Action, Function, or FunctionImport name.
+	 * - For OData: use the same namespace-qualified name or exact signature syntax as the
+	 *   [`operation`](#overlay-selector-by-operation) selector.
+	 *   When the operation is overloaded, the signature MUST identify one overload before
+	 *   `parameter` is resolved.
 	 * - For OpenAPI: the `operationId` of the HTTP operation.
 	 */
 	operation: string;
@@ -569,9 +682,11 @@ export interface OverlaySelectorByReturnType {
 	 */
 	returnType: true;
 	/**
-	 * Namespace-qualified Action or Function name whose ReturnType is targeted.
-	 * - For `edmx`: the namespace-qualified name of the Action or Function (e.g. `com.example.Svc.TerminateEmployee`).
-	 * - For `csdl-json`: the namespace-qualified name looked up in the Namespace object.
+	 * Namespace-qualified Action or Function whose return type is targeted.
+	 * Use the same name or exact signature syntax as the
+	 * [`operation`](#overlay-selector-by-operation) selector.
+	 * When the operation is overloaded, the signature MUST identify one overload before
+	 * its return type is resolved.
 	 */
 	operation: string;
 }
@@ -585,7 +700,7 @@ export interface OverlaySelectorByReturnType {
  * This is an open/extensible object — any properties are allowed.
  */
 export interface OverlayMeta {
-	[k: string]: unknown | undefined;
+	[k: string]: unknown;
 }
 /**
  * Optional arbitrary metadata for use by overlay consumers, tooling, and registries.
@@ -597,5 +712,5 @@ export interface OverlayMeta {
  * This is an open/extensible object — any properties are allowed.
  */
 export interface OverlayMeta1 {
-	[k: string]: unknown | undefined;
+	[k: string]: unknown;
 }
