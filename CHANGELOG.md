@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [unreleased]
 
+### Changed
+
+- Update the vendored ORD Overlay schema and generated types to ORD 1.17, including Arazzo, OpenAPI Overlay, and system-instance global ID support.
+
 ## [[0.1.0](https://github.com/open-resource-discovery/overlay-tools/releases/tag/rel/0.1.0)] - 2026-08-17
 
 - Prepared the project for open source: public CI and npm release workflows, REUSE licensing compliance, and updated README and contribution docs.
