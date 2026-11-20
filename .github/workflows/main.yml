@@ -1,78 +1,78 @@
 name: CI
 
 on:
-    push:
-        branches: [main]
-    pull_request:
-        branches: [main]
-    workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
-    contents: read
+  contents: read
 
 jobs:
-    linting:
-        name: Static linting
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+  linting:
+    name: Static linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-              with:
-                  node-version: '26'
-                  cache: 'npm'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: "npm"
 
-            - name: Install NPM dependencies
-              run: npm ci
+      - name: Install NPM dependencies
+        run: npm ci
 
-            - name: Lint
-              run: npm run lint
+      - name: Lint
+        run: npm run lint
 
-            - name: Format check
-              run: npm run format:check
+      - name: Format check
+        run: npm run format:check
 
-            - name: Typecheck
-              run: npx tsc --noEmit
+      - name: Typecheck
+        run: npx tsc --noEmit
 
-    unit-tests:
-        name: Unit Tests
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-              with:
-                  node-version: '26'
-                  cache: 'npm'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: "npm"
 
-            - name: Install NPM dependencies
-              run: npm ci
+      - name: Install NPM dependencies
+        run: npm ci
 
-            - name: Run Unit Tests
-              run: npm test
+      - name: Run Unit Tests
+        run: npm test
 
-    build:
-        name: Build
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-              with:
-                  node-version: '26'
-                  cache: 'npm'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: "npm"
 
-            - name: Install NPM dependencies
-              run: npm ci
+      - name: Install NPM dependencies
+        run: npm ci
 
-            - name: Build library
-              run: npm run build
+      - name: Build library
+        run: npm run build
 
-    inclusive-language:
-        name: Inclusive Language
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-            - uses: get-woke/woke-action@b2ec032c4a2c912142b38a6a453ad62017813ed0 # v0
-              with:
-                  fail-on-error: true
+  inclusive-language:
+    name: Inclusive Language
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: get-woke/woke-action@b2ec032c4a2c912142b38a6a453ad62017813ed0 # v0
+        with:
+          fail-on-error: true
