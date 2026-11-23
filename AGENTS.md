@@ -32,7 +32,7 @@ npm run format         # rewrites files in place
 
 ## Key Conventions
 
-- **Node >= 22** required (see `.nvmrc`)
+- **Node >= 24.22.1** required; Node 26 is the default (see `.nvmrc`)
 - **No `dist/` edits** — compiled output only, never edit by hand
 - Tests live in `tests/`, fixtures in `tests/fixtures/`
 - Selectors and patch logic: `src/merge/`; public API: `src/index.ts`
