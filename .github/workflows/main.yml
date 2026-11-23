@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-
 jobs:
   linting:
     name: Static linting
@@ -17,6 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
@@ -34,12 +35,16 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+    permissions:
+      contents: read
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
@@ -51,12 +56,16 @@ jobs:
       - name: Run Unit Tests
         run: npm test
 
+    permissions:
+      contents: read
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
@@ -68,11 +77,17 @@ jobs:
       - name: Build library
         run: npm run build
 
+    permissions:
+      contents: read
   inclusive-language:
     name: Inclusive Language
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: get-woke/woke-action@b2ec032c4a2c912142b38a6a453ad62017813ed0 # v0
         with:
           fail-on-error: true
+    permissions:
+      contents: read

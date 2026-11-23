@@ -1,0 +1,5 @@
+# Review owners for CI and build configuration.
+/.github/ @open-resource-discovery/overlay-admin
+/renovate.json @open-resource-discovery/overlay-admin
+/package.json @open-resource-discovery/overlay-admin
+/package-lock.json @open-resource-discovery/overlay-admin
