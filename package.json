@@ -76,5 +76,14 @@
 	},
 	"overrides": {
 		"underscore": "^1.13.8"
-	}
+	},
+	"packageManager": "npm@11.20.0",
+	"devEngines": {
+		"packageManager": {
+			"name": "npm",
+			"version": ">=11.20.0",
+			"onFail": "error"
+		}
+	},
+	"allowScripts": {}
 }

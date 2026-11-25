@@ -23,6 +23,9 @@ jobs:
           node-version: "26"
           cache: "npm"
 
+      - name: Install pinned npm for dependency policy
+        run: npm install --global --ignore-scripts npm@11.20.0 --registry=https://registry.npmjs.org/
+
       - name: Install NPM dependencies
         run: npm ci
 
@@ -51,6 +54,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
+
+      - name: Install pinned npm for dependency policy
+        run: npm install --global --ignore-scripts npm@11.20.0 --registry=https://registry.npmjs.org/
 
       - name: Install NPM dependencies
         run: npm ci
@@ -82,6 +88,9 @@ jobs:
         with:
           node-version: "26"
           cache: "npm"
+
+      - name: Install pinned npm for dependency policy
+        run: npm install --global --ignore-scripts npm@11.20.0 --registry=https://registry.npmjs.org/
 
       - name: Install NPM dependencies
         run: npm ci
