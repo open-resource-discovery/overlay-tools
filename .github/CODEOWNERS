@@ -4,3 +4,6 @@
 /package.json @open-resource-discovery/overlay-admin
 /package-lock.json @open-resource-discovery/overlay-admin
 /npmrc @open-resource-discovery/overlay-admin
+
+# Review the installer policy with the corresponding package owners.
+/.npmrc @open-resource-discovery/overlay-admin
