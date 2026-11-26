@@ -1,10 +1,12 @@
 {
 	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
-	"extends": ["group:definitelyTyped"],
+	"extends": ["group:definitelyTyped", "helpers:pinGitHubActionDigests"],
 	"timezone": "Europe/Berlin",
 	"prConcurrentLimit": 20,
 	"automerge": true,
 	"platformAutomerge": true,
-	"lockFileMaintenance": { "enabled": true },
+	"lockFileMaintenance": {
+		"enabled": true
+	},
 	"schedule": ["every weekend"]
 }

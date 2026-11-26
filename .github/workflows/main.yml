@@ -1,78 +1,110 @@
 name: CI
 
 on:
-    push:
-        branches: [main]
-    pull_request:
-        branches: [main]
-    workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
-    contents: read
-
+  contents: read
 jobs:
-    linting:
-        name: Static linting
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+  linting:
+    name: Static linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-              with:
-                  node-version: '26'
-                  cache: 'npm'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          package-manager-cache: false
+          node-version: "26"
 
-            - name: Install NPM dependencies
-              run: npm ci
+      - name: Install pinned npm for dependency policy
+        run: npm install --global --ignore-scripts npm@11.20.0 --registry=https://registry.npmjs.org/
 
-            - name: Lint
-              run: npm run lint
+      - name: Install NPM dependencies
+        run: npm ci --ignore-scripts
 
-            - name: Format check
-              run: npm run format:check
+      - name: Lint
+        run: npm run lint
 
-            - name: Typecheck
-              run: npx tsc --noEmit
+      - name: Format check
+        run: npm run format:check
 
-    unit-tests:
-        name: Unit Tests
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Typecheck
+        run: npx tsc --noEmit
 
-            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-              with:
-                  node-version: '26'
-                  cache: 'npm'
+  unit-test-matrix:
+    name: Unit Tests (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["22", "24", "26"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-            - name: Install NPM dependencies
-              run: npm ci
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          package-manager-cache: false
+          node-version: ${{ matrix.node-version }}
 
-            - name: Run Unit Tests
-              run: npm test
+      - name: Install pinned npm for dependency policy
+        run: npm install --global --ignore-scripts npm@11.20.0 --registry=https://registry.npmjs.org/
 
-    build:
-        name: Build
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install NPM dependencies
+        run: npm ci --ignore-scripts
 
-            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-              with:
-                  node-version: '26'
-                  cache: 'npm'
+      - name: Run Unit Tests
+        run: npm test
 
-            - name: Install NPM dependencies
-              run: npm ci
+  unit-tests:
+    name: Unit Tests
+    needs: unit-test-matrix
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check all supported Node versions
+        env:
+          MATRIX_RESULT: ${{ needs.unit-test-matrix.result }}
+        run: test "$MATRIX_RESULT" = "success"
 
-            - name: Build library
-              run: npm run build
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-    inclusive-language:
-        name: Inclusive Language
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-            - uses: get-woke/woke-action@b2ec032c4a2c912142b38a6a453ad62017813ed0 # v0
-              with:
-                  fail-on-error: true
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          package-manager-cache: false
+          node-version: "26"
+
+      - name: Install pinned npm for dependency policy
+        run: npm install --global --ignore-scripts npm@11.20.0 --registry=https://registry.npmjs.org/
+
+      - name: Install NPM dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build library
+        run: npm run build
+
+  inclusive-language:
+    name: Inclusive Language
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: get-woke/woke-action@b2ec032c4a2c912142b38a6a453ad62017813ed0 # v0
+        with:
+          fail-on-error: true
